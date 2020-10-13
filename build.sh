@@ -14,14 +14,13 @@
 ################################################
 
 LIBCURL="7.72.0"	# https://curl.haxx.se/download.html
-NGHTTP2="1.41.0"	# https://nghttp2.org/
+QUICHE="0.5.1"	# https://nghttp2.org/
 
 ################################################
 
 # Global flags
 engine=""
-buildnghttp2="-2"
-buildngtcp2="-3"
+buildquiche="-2"
 disablebitcode=""
 colorflag=""
 
@@ -44,12 +43,11 @@ usage ()
     echo
 	echo -e "${bold}Usage:${normal}"
 	echo
-	echo -e "  ${subbold}$0${normal} [-c ${dim}<curl version>${normal}] [-n ${dim}<nghttp2 version>${normal}] [-d] [-f] [-e] [-x] [-h]"
+	echo -e "  ${subbold}$0${normal} [-c ${dim}<curl version>${normal}] [-n ${dim}<nghttp2 version>${normal}] [-q ${dim}<quiche version>${normal}] [-e] [-x] [-h]"
 	echo
 	echo "         -c <version>   Build curl version (default $LIBCURL)"
 	echo "         -n <version>   Build nghttp2 version (default $NGHTTP2)"
-	echo "         -d             Compile without HTTP2 support"
-	echo "         -f             Compile without HTTP3 support"
+	echo "         -q <version>   Build quiche version (default $QUICHE)"
 	echo "         -e             Compile with OpenSSL engine support"
 	echo "         -b             Compile without bitcode"
 	echo "         -x             No color output"
@@ -58,7 +56,7 @@ usage ()
     exit 127
 }
 
-while getopts "o:c:n:dfexh\?" o; do
+while getopts "o:c:n:q:exh\?" o; do
     case "${o}" in
 		c)
 			LIBCURL="${OPTARG}"
@@ -66,11 +64,8 @@ while getopts "o:c:n:dfexh\?" o; do
 		n)
 			NGHTTP2="${OPTARG}"
 			;;
-		d)
-			buildnghttp2=""
-			;;
-		f)
-			buildngtcp2=""
+		q)
+			QUICHE="${OPTARG}"
 			;;
 		e)
 			engine="-e"
@@ -95,8 +90,8 @@ done
 shift $((OPTIND-1))
 
 ## Welcome
-echo -e "${bold}Build-cURL-nghttp2-nghttp3-ngtcp2${dim}"
-echo "This script builds OpenSSL, nghttp2, ngtcp2, nghttp3 and libcurl for MacOS (OS X), iOS and tvOS devices."
+echo -e "${bold}Build-cURL-nghttp2-quiche${dim}"
+echo "This script builds OpenSSL, nghttp2, quiche and libcurl for MacOS (OS X), iOS and tvOS devices."
 echo "Targets: x86_64, armv7, armv7s, arm64 and arm64e"
 echo
 
@@ -110,9 +105,11 @@ echo -e "${bold}Building OpenSSL${normal}"
 cd ..
 
 ## Nghttp2 Build
-if [ "$buildnghttp2" == "" ]; then
+buildnghttp2=""
+if [ "$NGHTTP2" == "" ]; then
 	NGHTTP2="NONE"
 else
+	buildnghttp2="-2"
 	echo
 	echo -e "${bold}Building nghttp2 for HTTP2 support${normal}"
 	cd nghttp2
@@ -120,21 +117,16 @@ else
 	cd ..
 fi
 
-## Nghttp3 Build
-if [ -n "$buildngtcp2" ]; then
+## Quiche Build
+buildquiche=""
+if [ "$QUICHE" == "" ]; then
+	QUICHE="NONE"
+else
+	buildquiche="-q"
 	echo
-	echo -e "${bold}Building nghttp3 for HTTP3 support${normal}"
-	cd nghttp3
-	./nghttp3-build.sh $colorflag
-	cd ..
-fi
-
-## Ngtcp2 Build
-if [ -n "$buildngtcp2" ]; then
-	echo
-	echo -e "${bold}Building ngtcp2 for HTTP3 support${normal}"
-	cd ngtcp2
-	./ngtcp2-build.sh $colorflag
+	echo -e "${bold}Building quiche for HTTP3 support${normal}"
+	cd quiche
+	./quiche-build.sh $colorflag
 	cd ..
 fi
 
@@ -142,7 +134,7 @@ fi
 echo
 echo -e "${bold}Building Curl${normal}"
 cd curl
-./libcurl-build.sh -v "$LIBCURL" $disablebitcode $colorflag $buildnghttp2 $buildngtcp2
+./libcurl-build.sh -v "$LIBCURL" $disablebitcode $colorflag $buildnghttp2 $buildquiche
 cd ..
 
 echo
